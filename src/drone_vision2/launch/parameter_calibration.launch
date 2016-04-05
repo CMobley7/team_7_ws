@@ -1,0 +1,19 @@
+<launch>
+  <node pkg="ar_drone_vision" name="parameter_calibration" type="parameter_calibration.py" output="screen">
+
+    <remap from="input_rgb_image" to="/camera/image_rect_color" />
+
+    <rosparam>
+       medianBlur_ksize: 9
+       GaussianBlur_ksize_width: 15
+       GaussianBlur_ksize_height: 15
+       GaussianBlur_sigmaX: 0
+       GaussianBlur_sigmaY: 0
+       Canny_threshold1: 200
+       Canny_threshold2: 25
+       Canny_apertureSize: 3
+       L2gradient: False
+    </rosparam>
+
+  </node>
+</launch>

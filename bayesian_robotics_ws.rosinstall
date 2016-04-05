@@ -1,0 +1,2 @@
+- git: {local-name: uav_control, uri: 'https://github.com/mickey13/uav-control.git', version: master}
+- git: {local-name: tum_simulator, uri: 'https://github.com/dougvk/tum_simulator', version: master}

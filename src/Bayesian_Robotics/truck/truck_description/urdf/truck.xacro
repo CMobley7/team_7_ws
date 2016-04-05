@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+       xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro"
+       name="truck">
+
+  <xacro:property name="stl_scale" value="0.001" />
+  <xacro:property name="truck_depth" value="6.48961" />
+  <xacro:property name="truck_height" value="2.330" />
+  <xacro:property name="truck_width" value="2.046611" />
+  <xacro:property name="truck_mass" value="2000" />
+  <xacro:property name="landing_zone_depth" value=".1" />
+  <xacro:property name="landing_zone_height" value="1.5" />
+  <xacro:property name="landing_zone_width" value="1.5" />
+  <xacro:property name="landing_zone_mass" value="2.25" />
+  <xacro:property name="front_wheel_r1" value="0.20" />
+  <xacro:property name="front_wheel_r2" value="0.33" />
+  <xacro:property name="front_wheel_height" value="0.20" />
+  <xacro:property name="front_wheel_mass" value="60" />
+  <xacro:property name="rear_wheel_r1" value="0.20" />
+  <xacro:property name="rear_wheel_r2" value="0.33" />
+  <xacro:property name="rear_wheel_height" value="0.43" />
+  <xacro:property name="rear_wheel_mass" value="120" />
+  <xacro:property name="wheel_base" value="3.40" />
+  <xacro:property name="dist_front_wheels" value="1.560" />
+  <xacro:property name="dist_rear_wheels" value="1.461" />
+  <xacro:property name="dist_axle_plate" value="0.65" />
+  <xacro:property name="pi" value="3.14159265359" />
+
+  <xacro:include filename="$(find truck_description)/urdf/truck.gazebo"/>
+  <xacro:include filename="$(find truck_description)/urdf/materials.xacro"/>
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <inertial>
+      <mass value="${truck_mass}" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="${(1/12)*truck_mass*(truck_height*truck_height+truck_depth*truck_depth)}" ixy="0.0" ixz="0.0"
+          iyy="${(1/12)*truck_mass*(truck_width*truck_width+truck_depth*truck_depth)}" iyz="0.0"
+          izz="${(1/12)*truck_mass*(truck_width*truck_width+truck_height*truck_height)}" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+      <geometry>
+          <mesh filename="package://truck_description/meshes/truck.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+      </geometry>
+        <material name="grey"/>
+    </visual>
+
+    <collision>
+	  <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+      <geometry>
+          <mesh filename="package://truck_description/meshes/truck.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+      </geometry>
+     </collision>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+    <origin xyz="0 0 ${front_wheel_r2}" rpy="0 0 0" />
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+  </joint>
+
+  <xacro:macro name="front_wheel" params="prefix reflect flip">
+		<link name="${prefix}_front_wheel_link">
+			<inertial>
+			  <mass value="${front_wheel_mass}" />
+			  <inertia ixx="${(1/12)*front_wheel_mass*(3*(front_wheel_r1*front_wheel_r1+front_wheel_r2*front_wheel_r2)+front_wheel_height*front_wheel_height)}" ixy="0.0" ixz="0.0"
+			      iyy="${(1/12)*front_wheel_mass*(3*(front_wheel_r1*front_wheel_r1+front_wheel_r2*front_wheel_r2)+front_wheel_height*front_wheel_height)}" iyz="0.0"
+			      izz="${(1/2)*front_wheel_mass*(front_wheel_r1*front_wheel_r1+front_wheel_r2*front_wheel_r2)}" />
+			</inertial>
+
+			<visual>
+        <origin rpy="${pi/2 + flip*pi} 0 0" />
+				<geometry>
+					<mesh filename="package://truck_description/meshes/front_wheel.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+				</geometry>
+          <material name="black"/>
+			</visual>
+
+			<collision>
+				<origin rpy="${pi/2 + flip*pi} 0 0" />
+				<geometry>
+					<cylinder length="${front_wheel_height}" radius="${front_wheel_r2}" />
+				</geometry>
+			</collision>
+		</link>
+
+		<joint name="base_link_to_${prefix}_front_wheel_link" type="continuous">
+			<axis xyz="0 1 0"/>
+			<parent link="base_link"/>
+			<child link="${prefix}_front_wheel_link"/>
+			<origin xyz="${wheel_base} ${reflect*(dist_front_wheels/2)} 0" rpy="0 0 0"/>
+			<limit effort="100" velocity="100" />
+			<joint_properties damping="0.0" friction="0.0" />
+		</joint>
+
+    <transmission name="${prefix}_front_wheel_trans" type="SimpleTransmission">
+      <type>transmission_interface/SimpleTransmission</type>
+    	<joint name="base_link_to_${prefix}_front_wheel_link">
+    	 <hardwareInterface>VelocityJointInterface</hardwareInterface>
+    	</joint>
+    	<actuator name="${prefix}_front_wheel_motor">
+    	  <mechanicalReduction>1</mechanicalReduction>
+    	</actuator>
+    </transmission>
+
+  </xacro:macro>
+
+  <xacro:front_wheel prefix="left" reflect="1" flip="1" />
+  <xacro:front_wheel prefix="right" reflect="-1" flip="0" />
+
+  <xacro:macro name="rear_wheel" params="prefix reflect flip">
+		<link name="${prefix}_rear_wheel_link">
+			<inertial>
+			  <mass value="${rear_wheel_mass}" />
+			  <inertia ixx="${(1/12)*rear_wheel_mass*(3*(rear_wheel_r1*rear_wheel_r1+rear_wheel_r2*rear_wheel_r2)+rear_wheel_height*rear_wheel_height)}" ixy="0.0" ixz="0.0"
+			      iyy="${(1/12)*rear_wheel_mass*(3*(rear_wheel_r1*rear_wheel_r1+rear_wheel_r2*rear_wheel_r2)+rear_wheel_height*rear_wheel_height)}" iyz="0.0"
+			      izz="${(1/2)*rear_wheel_mass*(rear_wheel_r1*rear_wheel_r1+rear_wheel_r2*rear_wheel_r2)}" />
+			</inertial>
+
+			<visual>
+        <origin rpy="${pi/2 + flip*pi} 0 0" />
+				<geometry>
+					<mesh filename="package://truck_description/meshes/rear_wheel.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+				</geometry>
+        <material name="black"/>
+			</visual>
+
+			<collision>
+				<origin rpy="${pi/2 + flip*pi} 0 0" />
+				<geometry>
+					<cylinder length="${rear_wheel_height}" radius="${rear_wheel_r2}" />
+				</geometry>
+			</collision>
+		</link>
+
+		<joint name="base_link_to_${prefix}_rear_wheel_link" type="continuous">
+			<axis xyz="0 1 0"/>
+			<parent link="base_link"/>
+			<child link="${prefix}_rear_wheel_link"/>
+			<origin xyz="0 ${reflect*(dist_rear_wheels/2)} 0" rpy="0 0 0"/>
+			<limit effort="100" velocity="100" />
+			<joint_properties damping="0.0" friction="0.0" />
+		</joint>
+
+    <transmission name="${prefix}_rear_wheel_trans" type="SimpleTransmission">
+      <type>transmission_interface/SimpleTransmission</type>
+    	<joint name="base_link_to_${prefix}_rear_wheel_link">
+    	  <hardwareInterface>VelocityJointInterface</hardwareInterface>
+    	</joint>
+      <actuator name="${prefix}_rear_wheel_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+  </xacro:macro>
+
+  <xacro:rear_wheel prefix="left" reflect="1" flip="1" />
+  <xacro:rear_wheel prefix="right" reflect="-1" flip="0" />
+
+  <link name="landing_zone_link">
+    <inertial>
+      <mass value="${landing_zone_mass}" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="${(1/12)*landing_zone_mass*(landing_zone_height*landing_zone_height+landing_zone_depth*landing_zone_depth)}" ixy="0.0" ixz="0.0"
+          iyy="${(1/12)*landing_zone_mass*(landing_zone_width*landing_zone_width+landing_zone_depth*landing_zone_depth)}" iyz="0.0"
+          izz="${(1/12)*landing_zone_mass*(landing_zone_width*landing_zone_width+landing_zone_height*landing_zone_height)}" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0 0 ${dist_axle_plate}" rpy="${pi/2} 0 0" />
+      <geometry>
+          <mesh filename="package://truck_description/meshes/landing_zone.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+      </geometry>
+        <material name="white"/>
+    </visual>
+
+    <collision>
+	  <origin xyz="0 0 ${dist_axle_plate}" rpy="${pi/2} 0 0" />
+      <geometry>
+          <mesh filename="package://truck_description/meshes/landing_zone.stl" scale="${stl_scale} ${stl_scale} ${stl_scale}"/>
+      </geometry>
+     </collision>
+  </link>
+
+  <joint name="base_link_to_landing_zone" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="landing_zone_link" />
+  </joint>
+
+</robot>

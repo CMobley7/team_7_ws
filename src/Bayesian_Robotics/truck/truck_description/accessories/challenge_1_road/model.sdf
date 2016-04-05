@@ -1,0 +1,47 @@
+<sdf version='1.4'>
+  <model name='road'>
+    <link name='base_footprint'>
+      <pose>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <mass>204100</mass>
+        <inertia>
+          <ixx>1.64481e+08</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.959e+08</iyy>
+          <iyz>0</iyz>
+          <izz>3.14195e+07</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_footprint_collision_base_link'>
+        <pose>0 0 0 1.5708 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://challenge_1_road/meshes/challenge_1_road.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='base_footprint_visual_base_link'>
+        <pose>0 0 0 1.5708 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://challenge_1_road/meshes/challenge_1_road.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+    </link>
+  </model>
+</sdf>

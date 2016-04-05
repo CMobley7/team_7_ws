@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://challenge_1_plane</uri>
+      <name>challenge_1_plane</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <include>
+      <uri>model://challenge_1_road</uri>
+      <name>challenge_1_road</name>
+      <pose>0 0 .15 0 0 0</pose>
+    </include>
+    <include>
+      <uri>model://speed_limit_sign</uri>
+      <name>speed_limit_1</name>
+      <pose>16 -12.5 .15 0 0 -2.35619449019</pose>
+    </include>
+    <include>
+      <uri>model://speed_limit_sign</uri>
+      <name>speed_limit_2</name>
+      <pose>-13.6 -10.5 .15 0 0 2.35619449019</pose>
+    </include>
+    <include>
+      <uri>model://challenge_1_start</uri>
+      <name>challenge_1_start</name>
+      <pose>65 -25 .15 0 0 0</pose>
+    </include>
+    <include>
+      <uri>model://challenge_1_start</uri>
+      <name>challenge_1_end</name>
+      <pose>-65 25 .15 0 0 0</pose>
+    </include>
+    <include>
+      <uri>model://quadrotor</uri>
+      <name>quadroter</name>
+      <pose>65 -25 .30 0 0 0</pose>
+    </include>
+  </world>
+</sdf>

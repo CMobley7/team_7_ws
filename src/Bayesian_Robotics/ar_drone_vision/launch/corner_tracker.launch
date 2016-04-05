@@ -1,0 +1,24 @@
+<launch>
+  <node pkg="ar_drone_vision" name="corner_tracker" type="corner_tracker.py" output="screen">
+
+    <remap from="input_rgb_image" to="/camera/image_raw" />
+
+    <rosparam>
+       show_text: True
+       feature_size: 3
+       drop_feature_point_interval: 8
+       medianBlur_ksize: 9
+       GaussianBlur_ksize_width: 15
+       GaussianBlur_ksize_height: 15
+       GaussianBlur_sigmaX: 0
+       GaussianBlur_sigmaY: 0
+       goodFeaturesToTrack_maxCorners: 15
+       goodFeaturesToTrack_qualityLevel: 0.05
+       goodFeaturesToTrack_minDistance: 70
+       goodFeaturesToTrack_blockSize: 15
+       goodFeaturesToTrack_useHarrisDetector: True
+       goodFeaturesToTrack_k: 0.05
+    </rosparam>
+
+  </node>
+</launch>

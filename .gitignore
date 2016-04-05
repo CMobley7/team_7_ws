@@ -1,0 +1,16 @@
+# Ignore build files.
+/build/*
+/devel/*
+
+# Ignore dependencies that get downloaded with wstool.
+/src/uav_control
+/src/ardrone_autonomy
+/src/ardrone_joystick
+/src/tum_simulator
+
+# Ignore some file types.
+*.swp
+
+# Ignore generated world file.
+/src/mbzirc_gazebo/worlds/mbzirc_arena.world
+
