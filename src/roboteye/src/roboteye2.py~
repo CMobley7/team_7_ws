@@ -36,6 +36,22 @@ class image_converter:
     c=hsv[:,:,2]==255 
     mask[a & b & c ]=255; 
     mask=np.uint8(mask);
+
+    kernel = np.ones((20,20),np.uint8)
+    dilated = cv2.dilate(mask,kernel,iterations = 1)
+    index=np.where(dilated==255);
+    print(index);
+    row_max=np.amax(index[0]);
+    col_max=np.amax(index[1]);
+    row_min=np.amin(index[0]);
+    col_min=np.amin(index[1]);
+    roi_bound=np.array([[row_min, col_min],[row_max, col_min],[row_max,col_max],[row_min,col_max]]);
+    print(roi_bound)
+    #cv2.rectangle(dilated, np.array([row_min, col_min]), np.array([row_max,col_max]), (255,0,0));
+    cv2.rectangle(dilated, (col_min, row_min), (col_max,row_max), (255,0,0));
+
+
+
     #convert the image frame to gray image 
     gray= cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
     ret,thresh = cv2.threshold(gray,200,255,cv2.THRESH_BINARY)
@@ -45,6 +61,7 @@ class image_converter:
     	cv2.drawContours(cv_image, contours, -1, (0,255,0), 3)
     	cnt = contours[0]
     	cv2.drawContours(cv_image, [cnt], 0, (0,0,255), 3)
+
 
     #find contour in the mask
     ret,thresh = cv2.threshold(gray,200,255,cv2.THRESH_BINARY)
@@ -71,8 +88,13 @@ class image_converter:
      #size and perimeter can also be found. They should be used when the program is ran on actual images
 	#area = cv2.contourArea(cnt)
         #perimeter = cv2.arcLength(cnt,True)
+    
+
+
+
     cv2.imshow("Image window", cv_image)
     cv2.imshow("Mask",mask)
+    cv2.imshow("dilated",dilated)
     cv2.waitKey(3)
 
     try:

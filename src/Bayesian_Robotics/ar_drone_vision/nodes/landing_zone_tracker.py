@@ -26,11 +26,11 @@ import cv2
 import cv2.cv as cv
 import numpy as np
 from cv2 import BORDER_DEFAULT
-from circle_detector import CircleDetector
+from landing_zone_detector import LandingZoneDetector
 
-class CircleTracker(CircleDetector):
+class LandingZoneTracker(LandingZoneDetector):
     def __init__(self, node_name):
-        super(CircleTracker, self).__init__(node_name)
+        super(LandingZoneTracker, self).__init__(node_name)
 
         #Do we show text on the display?
         self.show_text = rospy.get_param("~show_text", True)
@@ -39,21 +39,8 @@ class CircleTracker(CircleDetector):
         self.feature_size = rospy.get_param("~feature_size", 1)
 
         # How often should we refresh the feature
-        self.drop_feature_point_interval = rospy.get_param("~drop_feature_point_interval", 8)
+        self.drop_feature_point_interval = rospy.get_param("~drop_feature_point_interval", 160)
 
-        # Filter parameters
-        self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 9)
-        self.GaussianBlur_ksize_width = rospy.get_param("~GaussianBlur_ksize_width", 15)
-        self.GaussianBlur_ksize_height = rospy.get_param("~GaussianBlur_ksize_height", 15)
-        self.GaussianBlur_sigmaX = rospy.get_param("~GaussianBlur_sigmaX", 0)
-        self.GaussianBlur_sigmaY = rospy.get_param("~GaussianBlur_sigmaY", 0)
-
-        # Store all the feature parameters together for passing to filters
-        self.medianBlur_params = dict(ksize = self.medianBlur_ksize)
-        self.GaussianBlur_params = dict(ksize = (self.GaussianBlur_ksize_width,self.GaussianBlur_ksize_height),
-                                        sigmaX = self.GaussianBlur_sigmaX,
-                                        sigmaY = self.GaussianBlur_sigmaY,
-                                        borderType = BORDER_DEFAULT)
 
         # LK parameters
         self.lk_winSize = rospy.get_param("~lk_winSize", (10, 10))
@@ -76,59 +63,70 @@ class CircleTracker(CircleDetector):
     def process_image(self, cv_image):
         try:
             #Step 1: Image processing
+	        #Conver Image to HSV
+            hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
             # Mask image
             self.mask = np.zeros_like(cv_image)
-            x, y, w, h = self.frame_width / 4, self.frame_height / 4, self.frame_width / 2, self.frame_height / 2
-            self.mask[y:y+h, x:x+w] = 255
-            masked_image = cv2.bitwise_and(cv_image, self.mask)
+            h = hsv[:,:,0] == 0
+            s = hsv[:,:,1] == 0
+            v = hsv[:,:,2] == 255
+            self.mask[h & s & v] = 255
+            self.mask = self.mask.astype(np.uint8)
 
-            # Create a grey scale version of the image
-            self.grey = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
+            kernel = np.ones((20,20), np.uint8)
+            self.mask = cv2.dilate(self.mask, kernel, iterations = 1)
 
-            # Equalize the histogram to reduce lighting effects
-            self.grey = cv2.equalizeHist(self.grey)
+            if 	np.where(self.mask == 255):
+                index = np.where(self.mask == 255)
+                row_max = np.amax(index[0])
+                col_max = np.amax(index[1])
+                row_min = np.amin(index[0])
+                col_min = np.amin(index[1])
 
-            # Remove salt-and-pepper, and white noise by using a combination of a median and Gaussian filter
-            self.grey = cv2.medianBlur(self.grey, **self.medianBlur_params)
-            self.grey = cv2.GaussianBlur(self.grey, **self.GaussianBlur_params)
+                masked_image = cv2.bitwise_and(cv_image, self.mask)
+                self.grey = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
+                cv2.imshow('masked_image',self.grey)
 
-            #Step 2: Extracting feature_points
-            # If we haven't yet started tracking a feature point, extract a feature point from the image
-            if self.tracked_point is None:
-                self.feature_point = self.get_feature_point(self.grey)
-
-            #Step 3: If we have a feature points, track it using optical flow
-            if len(self.feature_point) > 0:
-                # Store a copy of the current grey image used for LK tracking
-                if self.prev_grey is None:
-                    self.prev_grey = self.grey
-
-                # Now that have a feature point, track it to the next frame using optical flow
-                self.tracked_point = self.track_feature_point(self.grey, self.prev_grey)
-            else:
-                # We have lost all feature_points so re-detect circle feature
-                self.tracked_point = None
-
-            #Step 4: Re-dectect circle feature every N frames
-            if self.frame_index % self.drop_feature_point_interval == 0 and len(self.feature_point) > 0:
-                self.tracked_point = None
-                self.frame_index = 0
-
-            self.frame_index += 1
+            	#Step 2: Extracting feature_points
+            	# If we haven't yet started tracking a feature point, extract a feature point from the image
+            	if self.tracked_point is None:
+                    self.feature_point = self.get_feature_point(self.grey)
 
 
-            # Process any special keyboard commands for this module
-            if self.keystroke != -1:
-                try:
-                    cc = chr(self.keystroke & 255).lower()
-                    if cc == 'c':
-                        # Clear the current feature_points
-                        self.feature_point = None
-                        self.tracked_point = None
-                except:
-                    pass
+            	#Step 3: If we have a feature points, track it using optical flow
+            	if len(self.feature_point) > 0:
+                    # Store a copy of the current grey image used for LK tracking
+                    if self.prev_grey is None:
+                        self.prev_grey = self.grey
 
-            self.prev_grey = self.grey
+                    # Now that have a feature point, track it to the next frame using optical flow
+                    self.tracked_point = self.track_feature_point(self.grey, self.prev_grey)
+                else:
+                    # We have lost all feature_points so re-detect circle feature
+                    self.tracked_point = None
+
+                # TODO: CHANGE COMMITTED BY MURAT TO STOP REINITIALIZATION
+
+                #Step 4: Re-dectect circle feature every N frames
+                # if self.frame_index % self.drop_feature_point_interval == 0 and len(self.feature_point) > 0:
+                #
+                #     self.tracked_point = None
+                #     self.frame_index = 0
+
+                # self.frame_index += 1
+
+                # Process any special keyboard commands for this module
+                if self.keystroke != -1:
+                    try:
+                        cc = chr(self.keystroke & 255).lower()
+                        if cc == 'c':
+                            # Clear the current feature_points
+                            self.feature_point = None
+                            self.tracked_point = None
+                    except:
+                        pass
+                self.prev_grey = self.grey
         except:
             pass
 
@@ -172,14 +170,10 @@ class CircleTracker(CircleDetector):
 
             # Set the global feature_point list to the new list
             self.feature_point = new_feature_point
-
-            # Convert feature_point from image coordinates to world coordinates
-            world_coordinates = np.dot(np.linalg.pinv(self.projectionMatrix), np.array([self.feature_point[0],self.feature_point[1], 1]))
-            world_coordinates = world_coordinates / world_coordinates[2]
-            world_coordinates = np.array((world_coordinates[0], world_coordinates[1]))
+            feature_point_to_track = np.array((new_feature_point[0], new_feature_point[1]))
 
             # Provide self.tracked_point to publish_poi to be published on the /poi topic
-            self.tracked_point = world_coordinates
+            self.tracked_point = feature_point_to_track
 
         except:
             self.tracked_point = None
@@ -188,9 +182,9 @@ class CircleTracker(CircleDetector):
 
 if __name__ == '__main__':
     try:
-        node_name = "circle_tracker"
-        CircleTracker(node_name)
+        node_name = "landing_zone_tracker"
+        LandingZoneTracker(node_name)
         rospy.spin()
     except KeyboardInterrupt:
-        print "Shutting down Circle Tracking node."
+        print "Shutting down Landing Zone Tracking node."
         cv.DestroyAllWindows()

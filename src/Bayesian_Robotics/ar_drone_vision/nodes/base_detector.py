@@ -56,7 +56,7 @@ class BaseDetector(object):
         self.feature_size = rospy.get_param("~feature_size", 1)
         
         # Initialize Basler Camera Tf Frame
-        self.basler_tf_frame = rospy.get_param("~basler_tf_frame", "ur5_arm_camera_arm_link" )
+        self.basler_tf_frame = rospy.get_param("~basler_tf_frame", "/ardrone/bottom/image_raw" )
 
         # Initialize the Point of Interest and its publisher
         self.POI = PointStamped()
@@ -83,7 +83,7 @@ class BaseDetector(object):
         self.cps_n_values = 20
         self.resize_window_width = 0
         self.resize_window_height = 0
-        self.undistort_image = True
+        self.undistort_image = False
         self.cameraMatrix = np.array([(2529.3016912669586, 0.0, 1007.0532160786125), (0.0, 2524.6309899852313, 650.2969085717225) , (0.0, 0.0, 1.0)])
         self.distCoeffs = np.array([-0.006795069030464255, -0.5045652004390003, 0.004947680741251182, 0.005813011948658337, 0.0])
         self.projectionMatrix = np.array([(2494.93408203125, 0.0, 1015.7040773447079, 0.0), (0.0, 2516.773681640625, 652.354580721294, 0.0), (0.0, 0.0, 1.0, 0.0)])
@@ -204,8 +204,8 @@ class BaseDetector(object):
         # Publish the display image
         self.publish_display_image(self.display_image)
         
-#         # Update the image display
-#         cv2.imshow(self.node_name, self.display_image)
+        # Update the image display
+        cv2.imshow(self.node_name, self.display_image)
 
 
     def depth_callback(self, data):

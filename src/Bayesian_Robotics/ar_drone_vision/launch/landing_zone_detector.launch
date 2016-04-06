@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="ar_drone_vision" name="landing_zone_detector" type="landing_zone_detector.py" output="screen">
+
+    <remap from="input_rgb_image" to="/ardrone/bottom/image_raw" />
+
+    <rosparam>
+       show_text: True
+       feature_size: 1
+    </rosparam>
+
+  </node>
+</launch>
