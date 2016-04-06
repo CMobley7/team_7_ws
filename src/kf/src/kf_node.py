@@ -9,23 +9,24 @@ import rospy
 from std_msgs.msg import String
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import PointStamped
 # Filter
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 
 def observation_callback(data):
-    rospy.loginfo(rospy.get_caller_id() + "Object detected at %f, %f, %f ", data.x, data.y, data.z)
-    z = np.array([[data.x], [data.y]])
+    # rospy.loginfo(rospy.get_caller_id() + "Object detected at %f, %f, %f ", data.point.x, data.point.y, data.point.z)
+    z = np.array([[data.point.x], [data.point.y]])
     # print z
     # print z.shape
 
+    print "Prior Belief :", f.x
     f.predict()
     # print "Predicted State: "
     # print x_bar
-    print "Updated State: "
+    print "Observation: ", z
+    print "Updated State: ", f.x
     f.update(z)
-    print f.x
     # observation is available; first correction, then prediction.
     # correction()
     # r = rospy.Rate(10) # 10hz
@@ -36,7 +37,7 @@ def observation_callback(data):
 
 if __name__ == '__main__':
     rospy.init_node('particle_filter', anonymous=True)
-    rospy.Subscriber("detected_targets", Point, observation_callback)
+    rospy.Subscriber("/poi", PointStamped, observation_callback)
     pub = rospy.Publisher('belief', OccupancyGrid, queue_size=10)
 
     f = KalmanFilter(dim_x=2, dim_z=2)
