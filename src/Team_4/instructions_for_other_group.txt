@@ -1,0 +1,19 @@
+1) put "MBZIRC_field" and "my_robot" folders in “home/.gazebo/models/”
+**NOTE: to show hidden files (like .gazebo) in home press ctrl+h with home open in the file viewer
+
+2) open a terminal and input the following commands:
+cd ~/.gazebo/models/my_robot/build
+cmake ../
+make
+
+3) put our world file somewhere on your computer
+
+4) in new terminal window, do these comands:
+source /opt/ros/indigo/setup.bash
+export GAZEBO_PLUGIN_PATH=$HOME/.gazebo/models/my_robot/build:$GAZEBO_PLUGIN_PATH
+export LD_LIBRARY_PATH=$HOME/.gazebo/models/my_robot/build:$LD_LIBRARY_PATH
+
+5) in the same terminal as step 4, path to the folder that you put our world file in and do this command:
+gazebo my_world.world
+
+----If you have issues, e-mail bongopd@gmail.com and I'll answer questions about these steps, but as long as you follow these steps, it should work

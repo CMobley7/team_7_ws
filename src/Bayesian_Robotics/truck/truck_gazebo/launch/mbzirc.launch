@@ -27,7 +27,7 @@
 	    <arg name="y" value="$(arg start_y1)" />
 	    <arg name="Y" value="$(arg start_yaw)" />
 	  </include>
-	  
+    
 	  <node name="image_view_bottom" pkg="image_view" type="image_view" args="image:=/ardrone/bottom/image_raw" />
 
 	  <node name="image_view_front" pkg="image_view" type="image_view" args="image:=/ardrone/front/image_raw" />

@@ -8,7 +8,7 @@
   <arg name="start_yaw" default="2.9" />
 
   <!-- Start Gazebo with world running -->
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+  <include file="$(find truck_gazebo)/launch/truck_playpen.launch">
     <arg name="world_name" value="$(find truck_gazebo)/worlds/truck_playpen.world" />
     <arg name="paused" value="false" />
     <arg name="debug" value="false" />
@@ -27,7 +27,7 @@
 	    <arg name="y" value="$(arg start_y1)" />
 	    <arg name="Y" value="$(arg start_yaw)" />
 	  </include>
-	  
+    
 	  <node name="image_view_bottom" pkg="image_view" type="image_view" args="image:=/ardrone/bottom/image_raw" />
 
 	  <node name="image_view_front" pkg="image_view" type="image_view" args="image:=/ardrone/front/image_raw" />
