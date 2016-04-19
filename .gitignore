@@ -10,7 +10,6 @@
 
 # Ignore some file types.
 *.swp
-
+*.pyc
 # Ignore generated world file.
 /src/mbzirc_gazebo/worlds/mbzirc_arena.world
-
