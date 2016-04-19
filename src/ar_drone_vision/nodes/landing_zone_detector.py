@@ -39,6 +39,36 @@ class LandingZoneDetector(BaseDetector):
         # How big should the feature points be (in pixels)?
         self.feature_size = rospy.get_param("~feature_size", 3)
 
+	# Filter parameters
+        self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 5)
+        self.GaussianBlur_ksize_width = rospy.get_param("~GaussianBlur_ksize_width", 9)
+        self.GaussianBlur_ksize_height = rospy.get_param("~GaussianBlur_ksize_height", 9)
+        self.GaussianBlur_sigmaX = rospy.get_param("~GaussianBlur_sigmaX", 0)
+        self.GaussianBlur_sigmaY = rospy.get_param("~GaussianBlur_sigmaY", 0)
+
+        # Store all the feature parameters together for passing to filters
+        self.medianBlur_params = dict(ksize = self.medianBlur_ksize)
+        self.GaussianBlur_params = dict(ksize = (self.GaussianBlur_ksize_width,self.GaussianBlur_ksize_height),
+                                        sigmaX = self.GaussianBlur_sigmaX,
+                                        sigmaY = self.GaussianBlur_sigmaY,
+                                        borderType = BORDER_DEFAULT)
+
+        # HoughCircles features parameters
+        self.HoughCircles_dp = rospy.get_param("~HoughCircles_dp", 1)
+	self.HoughCircles_minDist = rospy.get_param("~HoughCircles_minDist", 200)
+        self.HoughCircles_param1 = rospy.get_param("~HoughCircles_param1", 100)
+        self.HoughCircles_param2 = rospy.get_param("~HoughCircles_param2", 10)
+	self.HoughCircles_minRadius = rospy.get_param("~HoughCircles_minRadius", 30)
+        self.HoughCircles_maxRadius = rospy.get_param("~HoughCircles_maxRadius", 200)
+
+       # Store all parameters together for passing to the HoughCircle detector
+        self.HoughCircles_params = dict(method = CV_HOUGH_GRADIENT,
+                                        dp = self.HoughCircles_dp,
+                                        minDist = self.HoughCircles_minDist,
+                                        param1 = self.HoughCircles_param1,
+                                        param2 = self.HoughCircles_param2,
+                                        minRadius =self.HoughCircles_minRadius,
+                                        maxRadius = self.HoughCircles_maxRadius)
         # Initialize key variables
         self.feature_point = list()
         self.tracked_point = list()
@@ -68,11 +98,22 @@ class LandingZoneDetector(BaseDetector):
                 col_min = np.amin(index[1])
 
                 masked_image = cv2.bitwise_and(cv_image, self.mask)
-                masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('masked_image',masked_image)
+
+		# Create a grey scale version of the image
+                grey = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
+
+		# Equalize the histogram to reduce lighting effects
+            	grey = cv2.equalizeHist(grey)
+		
+		# Remove salt-and-pepper, and white noise by using a 
+		#combination of a median and Gaussian filter
+            	grey = cv2.medianBlur(grey, **self.medianBlur_params)
+            	grey = cv2.GaussianBlur(grey, **self.GaussianBlur_params)
+		
+                cv2.imshow('Imaged Searched',grey)
 
                 # Get the HoughCircles feature closest to the image's center
-                feature_point = self.get_feature_point(masked_image)
+                feature_point = self.get_feature_point(grey)
 
                 if feature_point is not None and len(feature_point) > 0:
                     # Draw the center of the circle
@@ -97,7 +138,7 @@ class LandingZoneDetector(BaseDetector):
         frame_height, frame_width = input_image.shape
 
         # Compute the x, y, and radius of viable circle features
-        fp = cv2.HoughCircles(input_image, method=CV_HOUGH_GRADIENT, dp=1, minDist=frame_width/2)
+        fp = cv2.HoughCircles(input_image, **self.HoughCircles_params)
 
         if fp is not None and len(fp) > 0:
             # Convert fp to a Numpy array

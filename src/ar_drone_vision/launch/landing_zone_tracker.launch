@@ -1,0 +1,23 @@
+<launch>
+  <node pkg="ar_drone_vision" name="landing_zone_tracker" type="landing_zone_tracker.py" output="screen">
+    
+    <remap from="input_rgb_image" to="/ardrone/bottom/image_raw" />
+   
+     <rosparam>
+       show_text: True
+       feature_size: 1
+       medianBlur_ksize: 5
+       GaussianBlur_ksize_width: 9
+       GaussianBlur_ksize_height: 9
+       GaussianBlur_sigmaX: 0
+       GaussianBlur_sigmaY: 0
+       HoughCircles_dp: 1
+       HoughCircles_minDist: 200
+       HoughCircles_param1: 100
+       HoughCircles_param2: 10
+       HoughCircles_minRadius: 30
+       HoughCircles_maxRadius: 200
+    </rosparam>
+    
+  </node>
+</launch>

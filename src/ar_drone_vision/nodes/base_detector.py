@@ -38,6 +38,10 @@ from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
 import time
 import numpy as np
+from numpy.linalg import inv
+import tf
+from tf import TransformListener
+from tf.transformations import quaternion_matrix
 
 class BaseDetector(object):
     def __init__(self, node_name):
@@ -54,7 +58,7 @@ class BaseDetector(object):
         self.show_text = rospy.get_param("~show_text", True)
         self.flip_image = rospy.get_param("~flip_image", False)
         self.feature_size = rospy.get_param("~feature_size", 1)
-        
+
         # Initialize Basler Camera Tf Frame
         self.basler_tf_frame = rospy.get_param("~basler_tf_frame", "/ardrone/bottom/image_raw" )
 
@@ -84,9 +88,8 @@ class BaseDetector(object):
         self.resize_window_width = 0
         self.resize_window_height = 0
         self.undistort_image = False
-        self.cameraMatrix = np.array([(2529.3016912669586, 0.0, 1007.0532160786125), (0.0, 2524.6309899852313, 650.2969085717225) , (0.0, 0.0, 1.0)])
+        self.cameraMatrix = np.array([(2529.3016912669586, 0.0, 1007.0532160786125, 0.0), (0.0, 2524.6309899852313, 650.2969085717225, 0.0) , (0.0, 0.0, 1.0, 0.0)])
         self.distCoeffs = np.array([-0.006795069030464255, -0.5045652004390003, 0.004947680741251182, 0.005813011948658337, 0.0])
-        self.projectionMatrix = np.array([(2494.93408203125, 0.0, 1015.7040773447079, 0.0), (0.0, 2516.773681640625, 652.354580721294, 0.0), (0.0, 0.0, 1.0, 0.0)])
 
 #         # Create the main display window
 #         self.cv_window_name = self.node_name
@@ -101,9 +104,12 @@ class BaseDetector(object):
         # The image topic names can be remapped in the appropriate launch file
         self.image_sub = rospy.Subscriber("input_rgb_image", Image, self.image_callback, queue_size=5)
         self.depth_sub = rospy.Subscriber("input_depth_image", Image, self.depth_callback, queue_size=5)
-        
+
         # Create an image publisher to output the display_image
         self.image_pub = rospy.Publisher("output_rgb_image", Image, queue_size=5)
+
+	# Create a tf listener
+	self.listener = tf.TransformListener()
 
     def image_callback(self, data):
         # Store the image header in a global variable
@@ -203,7 +209,7 @@ class BaseDetector(object):
 
         # Publish the display image
         self.publish_display_image(self.display_image)
-        
+
         # Update the image display
         cv2.imshow(self.node_name, self.display_image)
 
@@ -243,14 +249,14 @@ class BaseDetector(object):
 
         except CvBridgeError, e:
             print e
-    
+
     def publish_display_image(self, display_image):
         if display_image is not None:
             try:
                 self.image_pub.publish(self.bridge.cv2_to_imgmsg(display_image, 'bgr8'))
-        
+
             except CvBridgeError, e:
-                print e            
+                print e
         else:
             return
 
@@ -261,15 +267,38 @@ class BaseDetector(object):
             return
 
         try:
+            poseMatrix = np.array([[poi[0]],[poi[1]], [1]])
+            (trans,rot) = self.listener.lookupTransform('nav', 'ardrone_base_bottomcam', rospy.Time())
+
+            # Construct transformation matrix with rotation and translation
+            T = quaternion_matrix(rot)
+            # Rotation first
+            # Add translation vector into its place
+            T[0,3] = trans[0];
+            T[1,3] = trans[1];
+            T[2,3] = trans[2];
+
+            # Delete the 3rd col in the transformation matrix
+            ## Enforcing "Z" to be 0
+            T_star = np.delete(T, 2, 1)
+
+            # Construct projection matrix with extrinsic and intrinsic matrices
+            P_star = np.dot(self.cameraMatrix, T_star)
+            P_star_inv = inv(P_star)
+
+            point3D = np.dot(P_star_inv, poseMatrix)
+            points3D = point3D/point3D[2]
+
             self.POI = PointStamped()
             self.POI.header.frame_id = self.basler_tf_frame
             self.POI.header.stamp = rospy.Time.now()
-            self.POI.point.x = float(poi[0])
-            self.POI.point.y = float(poi[1])
-            self.POI.point.z = float(0.0)
+            self.POI.point.x = points3D[0][0]
+            self.POI.point.y = points3D[1][0]
+            self.POI.point.z = 0.0
             self.poi_pub.publish(self.POI)
-        except:
-            rospy.loginfo("Publishing POI failed")
+
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
 
     def process_image(self, frame):
         return frame

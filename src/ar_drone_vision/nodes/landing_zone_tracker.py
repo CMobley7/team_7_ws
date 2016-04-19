@@ -38,9 +38,19 @@ class LandingZoneTracker(LandingZoneDetector):
         # How big should the feature points be (in pixels)?
         self.feature_size = rospy.get_param("~feature_size", 1)
 
-        # How often should we refresh the feature
-        self.drop_feature_point_interval = rospy.get_param("~drop_feature_point_interval", 160)
+        # Filter parameters
+        self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 5)
+        self.GaussianBlur_ksize_width = rospy.get_param("~GaussianBlur_ksize_width", 9)
+        self.GaussianBlur_ksize_height = rospy.get_param("~GaussianBlur_ksize_height", 9)
+        self.GaussianBlur_sigmaX = rospy.get_param("~GaussianBlur_sigmaX", 0)
+        self.GaussianBlur_sigmaY = rospy.get_param("~GaussianBlur_sigmaY", 0)
 
+        # Store all the feature parameters together for passing to filters
+        self.medianBlur_params = dict(ksize = self.medianBlur_ksize)
+        self.GaussianBlur_params = dict(ksize = (self.GaussianBlur_ksize_width,self.GaussianBlur_ksize_height),
+                                        sigmaX = self.GaussianBlur_sigmaX,
+                                        sigmaY = self.GaussianBlur_sigmaY,
+                                        borderType = BORDER_DEFAULT)
 
         # LK parameters
         self.lk_winSize = rospy.get_param("~lk_winSize", (10, 10))
@@ -85,8 +95,19 @@ class LandingZoneTracker(LandingZoneDetector):
                 col_min = np.amin(index[1])
 
                 masked_image = cv2.bitwise_and(cv_image, self.mask)
+
+		# Create a grey scale version of the image
                 self.grey = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('masked_image',self.grey)
+
+		# Equalize the histogram to reduce lighting effects
+            	self.grey = cv2.equalizeHist(self.grey)
+		
+		# Remove salt-and-pepper, and white noise by using a 
+		#combination of a median and Gaussian filter
+            	self.grey = cv2.medianBlur(self.grey, **self.medianBlur_params)
+            	self.grey = cv2.GaussianBlur(self.grey, **self.GaussianBlur_params)
+
+                cv2.imshow('Imaged Searched',self.grey)
 
             	#Step 2: Extracting feature_points
             	# If we haven't yet started tracking a feature point, extract a feature point from the image
@@ -105,16 +126,6 @@ class LandingZoneTracker(LandingZoneDetector):
                 else:
                     # We have lost all feature_points so re-detect circle feature
                     self.tracked_point = None
-
-                # TODO: CHANGE COMMITTED BY MURAT TO STOP REINITIALIZATION
-
-                #Step 4: Re-dectect circle feature every N frames
-                # if self.frame_index % self.drop_feature_point_interval == 0 and len(self.feature_point) > 0:
-                #
-                #     self.tracked_point = None
-                #     self.frame_index = 0
-
-                # self.frame_index += 1
 
                 # Process any special keyboard commands for this module
                 if self.keystroke != -1:
