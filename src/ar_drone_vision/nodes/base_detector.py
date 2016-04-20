@@ -87,9 +87,9 @@ class BaseDetector(object):
         self.cps_n_values = 20
         self.resize_window_width = 0
         self.resize_window_height = 0
-        self.undistort_image = False
-        self.cameraMatrix = np.array([(2529.3016912669586, 0.0, 1007.0532160786125, 0.0), (0.0, 2524.6309899852313, 650.2969085717225, 0.0) , (0.0, 0.0, 1.0, 0.0)])
-        self.distCoeffs = np.array([-0.006795069030464255, -0.5045652004390003, 0.004947680741251182, 0.005813011948658337, 0.0])
+        self.undistort_image = True
+        self.cameraMatrix = np.array([(673.99118612752795, 0.0, 299.96888527626152, 0.0), (0.0, 670.95512907434500, 195.46928326409596, 0.0) , (0.0, 0.0, 1.0, 0.0)])
+        self.distCoeffs = np.array([.18350532641911785, -.94152562502893422,  .0031539024880758810, -.0038286312273527086, -.027457957361076115])
 
 #         # Create the main display window
 #         self.cv_window_name = self.node_name
