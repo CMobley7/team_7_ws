@@ -11,13 +11,14 @@
        GaussianBlur_ksize_height: 9
        GaussianBlur_sigmaX: 0
        GaussianBlur_sigmaY: 0
-       HoughCircles_dp: 1
+       HoughCircles_dp: 2
        HoughCircles_minDist: 200
        HoughCircles_param1: 100
-       HoughCircles_param2: 10
-       HoughCircles_minRadius: 30
-       HoughCircles_maxRadius: 200
+       HoughCircles_param2: 320
+       HoughCircles_minRadius: 100
+       HoughCircles_maxRadius: 250
     </rosparam>
     
   </node>
-</launch>
+</launch> 
+

@@ -87,9 +87,10 @@ class BaseDetector(object):
         self.cps_n_values = 20
         self.resize_window_width = 0
         self.resize_window_height = 0
-        self.undistort_image = True
-        self.cameraMatrix = np.array([(673.99118612752795, 0.0, 299.96888527626152, 0.0), (0.0, 670.95512907434500, 195.46928326409596, 0.0) , (0.0, 0.0, 1.0, 0.0)])
+        self.undistort_image = False
+        self.cameraMatrix = np.array([(673.99118612752795, 0.0, 299.96888527626152), (0.0, 670.95512907434500, 195.46928326409596) , (0.0, 0.0, 1.0)])
         self.distCoeffs = np.array([.18350532641911785, -.94152562502893422,  .0031539024880758810, -.0038286312273527086, -.027457957361076115])
+        self.cameraMatrix_with_zeros = np.array([(673.99118612752795, 0.0, 299.96888527626152, 0.0), (0.0, 670.95512907434500, 195.46928326409596, 0.0) , (0.0, 0.0, 1.0, 0.0)])
 
 #         # Create the main display window
 #         self.cv_window_name = self.node_name
@@ -283,7 +284,7 @@ class BaseDetector(object):
             T_star = np.delete(T, 2, 1)
 
             # Construct projection matrix with extrinsic and intrinsic matrices
-            P_star = np.dot(self.cameraMatrix, T_star)
+            P_star = np.dot(self.cameraMatrix_with_zeros, T_star)
             P_star_inv = inv(P_star)
 
             point3D = np.dot(P_star_inv, poseMatrix)

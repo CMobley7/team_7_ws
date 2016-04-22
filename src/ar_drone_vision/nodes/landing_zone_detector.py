@@ -81,10 +81,19 @@ class LandingZoneDetector(BaseDetector):
 
             # Mask image
             self.mask = np.zeros_like(cv_image)
-            h = hsv[:,:,0] == 0
-            s = hsv[:,:,1] == 0
-            v = hsv[:,:,2] == 255
-            self.mask[h & s & v] = 255
+
+            # mask for perfect world(simulation)
+            #h = hsv[:,:,0] == 0
+            #s = hsv[:,:,1] == 0
+            #v = hsv[:,:,2] == 255
+            # mask for real, cruel, unforgiving, unfair, fucked-up world
+            #h = np.logical_and(hsv[:,:,0] >= 0, hsv[:,:,0] <= 100)
+            s = np.logical_and(hsv[:,:,1] >= 0, hsv[:,:,1] <=50  )
+            v = np.logical_and(hsv[:,:,2] >= 220, hsv[:,:,2] <= 255)
+
+
+            #self.mask[h & s & v] = 255
+            self.mask[s & v] = 255
             self.mask = self.mask.astype(np.uint8)
 
             kernel = np.ones((20,20), np.uint8)
