@@ -6,17 +6,17 @@
      <rosparam>
        show_text: True
        feature_size: 5
-       medianBlur_ksize: 5
-       GaussianBlur_ksize_width: 9
-       GaussianBlur_ksize_height: 9
+       medianBlur_ksize: 3
+       GaussianBlur_ksize_width: 7
+       GaussianBlur_ksize_height: 7
        GaussianBlur_sigmaX: 0
        GaussianBlur_sigmaY: 0
        HoughCircles_dp: 2
        HoughCircles_minDist: 200
-       HoughCircles_param1: 75
-       HoughCircles_param2: 25
-       HoughCircles_minRadius: 25
-       HoughCircles_maxRadius: 450
+       HoughCircles_param1: 100
+       HoughCircles_param2: 75
+       HoughCircles_minRadius: 100
+       HoughCircles_maxRadius: 250
     </rosparam>
     
   </node>

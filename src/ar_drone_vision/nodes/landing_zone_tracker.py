@@ -36,7 +36,7 @@ class LandingZoneTracker(LandingZoneDetector):
         self.show_text = rospy.get_param("~show_text", True)
 
         # How big should the feature points be (in pixels)?
-        self.feature_size = rospy.get_param("~feature_size", 1)
+        self.feature_size = rospy.get_param("~feature_size", 3)
 
         # Filter parameters
         self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 5)
@@ -63,8 +63,8 @@ class LandingZoneTracker(LandingZoneDetector):
                   criteria = self.lk_criteria)
 
         # Initialize key variables
-        self.feature_point = None
-        self.tracked_point = None
+        self.feature_point = list()
+        self.tracked_point = list()
         self.mask = None
         self.grey = None
         self.prev_grey = None
@@ -73,15 +73,14 @@ class LandingZoneTracker(LandingZoneDetector):
     def process_image(self, cv_image):
         try:
             #Step 1: Image processing
-	        #Conver Image to HSV
+	    #Conver Image to HSV
             hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
 
             # Mask image
             self.mask = np.zeros_like(cv_image)
-            h = hsv[:,:,0] == 0
-            s = hsv[:,:,1] == 0
-            v = hsv[:,:,2] == 255
-            self.mask[h & s & v] = 255
+            s = np.logical_and(hsv[:,:,1] >= 0, hsv[:,:,1] <=50)
+            v = np.logical_and(hsv[:,:,2] >= 220, hsv[:,:,2] <= 255)
+            self.mask[s & v] = 255
             self.mask = self.mask.astype(np.uint8)
 
             kernel = np.ones((20,20), np.uint8)

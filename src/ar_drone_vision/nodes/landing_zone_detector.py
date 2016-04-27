@@ -56,10 +56,10 @@ class LandingZoneDetector(BaseDetector):
         # HoughCircles features parameters
         self.HoughCircles_dp = rospy.get_param("~HoughCircles_dp", 1)
 	self.HoughCircles_minDist = rospy.get_param("~HoughCircles_minDist", 200)
-        self.HoughCircles_param1 = rospy.get_param("~HoughCircles_param1", 100)
-        self.HoughCircles_param2 = rospy.get_param("~HoughCircles_param2", 10)
-	self.HoughCircles_minRadius = rospy.get_param("~HoughCircles_minRadius", 30)
-        self.HoughCircles_maxRadius = rospy.get_param("~HoughCircles_maxRadius", 200)
+        self.HoughCircles_param1 = rospy.get_param("~HoughCircles_param1", 50)
+        self.HoughCircles_param2 = rospy.get_param("~HoughCircles_param2", 25)
+	self.HoughCircles_minRadius = rospy.get_param("~HoughCircles_minRadius", 100)
+        self.HoughCircles_maxRadius = rospy.get_param("~HoughCircles_maxRadius", 250)
 
        # Store all parameters together for passing to the HoughCircle detector
         self.HoughCircles_params = dict(method = CV_HOUGH_GRADIENT,
