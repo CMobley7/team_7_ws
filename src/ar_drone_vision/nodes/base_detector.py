@@ -65,6 +65,8 @@ class BaseDetector(object):
         # Initialize the Point of Interest and its publisher
         self.POI = PointStamped()
         self.poi_pub = rospy.Publisher("/poi", PointStamped, queue_size=5)
+        #self.Error = PointStamped()
+        #self.error_pub = rospy.Publisher("/error", PointStamped, queue_size=5)
 
         # Initialize a number of global variables
         self.frame = None
@@ -161,6 +163,9 @@ class BaseDetector(object):
 
         # Publish the POI
         self.publish_poi()
+
+        # Publish the error
+        #self.publish_error()
 
         # Handle keyboard events
         self.keystroke = cv.WaitKey(5)
@@ -260,6 +265,26 @@ class BaseDetector(object):
                 print e
         else:
             return
+    #def publish_error(self):
+        #if self.tracked_point is not None and len(self.tracked_point) > 0:
+            #feature_point = self.tracked_point
+        #else:
+            #return
+
+        #try:
+            #error_x = feature_point[0] - self.frame_width/2
+            #error_y = feature_point[1] - self.frame_height/2
+
+            #self.Error = PointStamped()
+            #self.Error.header.frame_id = self.basler_tf_frame
+            #self.Error.header.stamp = rospy.Time.now()
+            #self.Error.point.x = error_x
+            #self.Error.point.y = error_y
+            #self.Error.point.z = 0.0
+            #self.error_pub.publish(self.Error)
+
+        #except:
+            #return
 
     def publish_poi(self):
         if self.tracked_point is not None and len(self.tracked_point) > 0:
@@ -268,34 +293,33 @@ class BaseDetector(object):
             return
 
         try:
-            poseMatrix = np.array([[poi[0]],[poi[1]], [1]])
-            (trans,rot) = self.listener.lookupTransform('nav', 'ardrone_base_bottomcam', rospy.Time())
+            #poseMatrix = np.array([[poi[0]],[poi[1]], [1]])
+            #(trans,rot) = self.listener.lookupTransform('nav', 'ardrone_base_bottomcam', rospy.Time())
 
             # Construct transformation matrix with rotation and translation
-            T = quaternion_matrix(rot)
+            #T = quaternion_matrix(rot)
             # Rotation first
             # Add translation vector into its place
-            T[0,3] = trans[0];
-            T[1,3] = trans[1];
-            T[2,3] = trans[2];
+            #T[0,3] = trans[0];
+            #T[1,3] = trans[1];
+            #T[2,3] = trans[2];
 
             # Delete the 3rd col in the transformation matrix
             ## Enforcing "Z" to be 0
-            T_star = np.delete(T, 2, 1)
+            #T_star = np.delete(T, 2, 1)
 
             # Construct projection matrix with extrinsic and intrinsic matrices
-            P_star = np.dot(self.cameraMatrix_with_zeros, T_star)
-            P_star_inv = inv(P_star)
+            #P_star = np.dot(self.cameraMatrix_with_zeros, T_star)
+            #P_star_inv = inv(P_star)
 
-            point3D = np.dot(P_star_inv, poseMatrix)
-            points3D = point3D/point3D[2]
-
+            #point3D = np.dot(P_star_inv, poseMatrix)
+            #points3D = point3D/point3D[2]
             self.POI = PointStamped()
             self.POI.header.frame_id = self.basler_tf_frame
             self.POI.header.stamp = rospy.Time.now()
-            self.POI.point.x = points3D[0][0]
-            self.POI.point.y = points3D[1][0]
-            self.POI.point.z = 0.0
+            self.POI.point.x = poi[0]#points3D[0][0]
+            self.POI.point.y = poi[1]#points3D[1][0]
+            self.POI.point.z = poi[2]
             self.poi_pub.publish(self.POI)
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):

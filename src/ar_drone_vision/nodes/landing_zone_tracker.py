@@ -38,6 +38,9 @@ class LandingZoneTracker(LandingZoneDetector):
         # How big should the feature points be (in pixels)?
         self.feature_size = rospy.get_param("~feature_size", 3)
 
+        # How often should we refresh the feature
+        self.drop_feature_point_interval = rospy.get_param("~drop_feature_point_interval", 8)
+
         # Filter parameters
         self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 5)
         self.GaussianBlur_ksize_width = rospy.get_param("~GaussianBlur_ksize_width", 9)
@@ -51,16 +54,21 @@ class LandingZoneTracker(LandingZoneDetector):
                                         sigmaX = self.GaussianBlur_sigmaX,
                                         sigmaY = self.GaussianBlur_sigmaY,
                                         borderType = BORDER_DEFAULT)
+        # Get kernel parameters
+        self.kernel_param_1 = rospy.get_param("~kernel_param_1", 7)
+        self.kernel_param_2 = rospy.get_param("~kernel_param_2", 7)
 
         # LK parameters
         self.lk_winSize = rospy.get_param("~lk_winSize", (10, 10))
         self.lk_maxLevel = rospy.get_param("~lk_maxLevel", 2)
         self.lk_criteria = rospy.get_param("~lk_criteria", (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 0.01))
+ 	self.lk_derivLambda = rospy.get_param("~lk_derivLambda", 0.1)
 
         # Store all the LKT tracker parameters together for passing to tracker
         self.lk_params = dict( winSize  = self.lk_winSize,
                   maxLevel = self.lk_maxLevel,
-                  criteria = self.lk_criteria)
+                  criteria = self.lk_criteria)#,
+		  #derivLambda = self.lk_derivLambda)
 
         # Initialize key variables
         self.feature_point = list()
@@ -104,7 +112,10 @@ class LandingZoneTracker(LandingZoneDetector):
 		# Remove salt-and-pepper, and white noise by using a 
 		#combination of a median and Gaussian filter
             	self.grey = cv2.medianBlur(self.grey, **self.medianBlur_params)
-            	self.grey = cv2.GaussianBlur(self.grey, **self.GaussianBlur_params)
+            	self.grey = cv2.GaussianBlur(self.grey, **self.GaussianBlur_params)	
+		kernel_1 = np.ones((self.kernel_param_1,self.kernel_param_2), np.uint8) 
+		self.grey = cv2.erode(self.grey, kernel_1, iterations=1)
+                #grey = cv2.morphologyEx(grey, cv2.MORPH_CLOSE, kernel_1)
 
                 cv2.imshow('Imaged Searched',self.grey)
 
@@ -125,6 +136,13 @@ class LandingZoneTracker(LandingZoneDetector):
                 else:
                     # We have lost all feature_points so re-detect circle feature
                     self.tracked_point = None
+            	
+		#Step 4: Re-dectect circle feature every N frames
+            	if self.frame_index % self.drop_feature_point_interval == 0 and len(self.feature_point) > 0:
+                    self.tracked_point = None
+                    self.frame_index = 0
+
+            	self.frame_index += 1
 
                 # Process any special keyboard commands for this module
                 if self.keystroke != -1:
@@ -174,13 +192,21 @@ class LandingZoneTracker(LandingZoneDetector):
                 new_feature_point = np.array((x, y, self.feature_point[2]))
 
             # Draw the center of the circle
-            cv2.circle(self.marker_image, (new_feature_point[0], new_feature_point[1]), self.feature_size, (0, 0, 255, 0), cv.CV_FILLED, 8, 0)
+            cv2.circle(self.marker_image, (new_feature_point[0], new_feature_point[1]), self.feature_size, (0, 0, 255), cv.CV_FILLED, 8, 0)
+            
             # Draw the outer circle
-            cv2.circle(self.marker_image, (new_feature_point[0], new_feature_point[1]), new_feature_point[2], (0, 255, 0, 0), self.feature_size, 8, 0)
-
+            cv2.circle(self.marker_image, (new_feature_point[0], new_feature_point[1]), new_feature_point[2], (0, 255, 0), self.feature_size, 8, 0)
+            
+            # Draw error line
+            cv2.line(self.marker_image, (self.frame_width/2, self.frame_height/2), (new_feature_point[0], new_feature_point[1]), (0, 0, 255), 10, 8, 0)
+	            
+            # Display error distance on screen
+            strInfo =  str('Error: ' + str(self.frame_width/2-new_feature_point[0]) + " ," + str(self.frame_height/2-new_feature_point[1]))
+	    cv2.putText(self.marker_image, strInfo, (self.frame_width/2, self.frame_height/2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+            
             # Set the global feature_point list to the new list
             self.feature_point = new_feature_point
-            feature_point_to_track = np.array((new_feature_point[0], new_feature_point[1]))
+            feature_point_to_track = np.array((new_feature_point[0], new_feature_point[1], new_feature_point[2]))
 
             # Provide self.tracked_point to publish_poi to be published on the /poi topic
             self.tracked_point = feature_point_to_track

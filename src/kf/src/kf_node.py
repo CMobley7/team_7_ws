@@ -7,55 +7,36 @@ import numpy as np
 # ROS Related Stuff
 import rospy
 import tf
+import cv2
 from std_msgs.msg import String
-from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PointStamped
-from sensor_msgs.msg import CameraInfo
-
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 # Filter
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 
 def observation_callback(data):
-    global firstStep
-    # rospy.loginfo(rospy.get_caller_id() + "Object detected at %f, %f, %f ", data.point.x, data.point.y, data.point.z)
-    z = np.array([[data.point.x], [data.point.y]])
-    # print z
-    # print z.shape
-    if(firstStep):
-        f.x = f.x = np.array([[data.point.x], [data.point.y]])
-        firstStep = False
-        return
+    global observation
+    print "hi"
+    observation = data
+
+def img_callback(img):
+    global frame
+    bridge = CvBridge()
+    frame = bridge.imgmsg_to_cv2(img, "bgr8")
+    frame = np.array(frame, dtype=np.uint8)
 
 
-    print "Prior Belief :", f.x
-    f.predict()
-    # print "Predicted State: "
-    # print x_bar
-    print "Observation: ", z
-    print "Updated State: ", f.x
-    f.update(z)
-    # observation is available; first correction, then prediction.
-    # correction()
-    # r = rospy.Rate(10) # 10hz
-    # while true: # continue predicting until a new observation becomes avaliable at 10 hz
-    #   prediction()
-    #   r.sleep()
-    # TODO: Do I need to create a sensor likelihood?
-
-def camera_info_callback(data):
-    global intrinsicMatrix
-    intrinsicMatrix = data.K
-    intrinsicMatrix = np.array(intrinsicMatrix).reshape([3,3])
 
 if __name__ == '__main__':
     rospy.init_node('particle_filter', anonymous=True)
     rospy.Subscriber("/poi", PointStamped, observation_callback)
-    rospy.Subscriber("/ardrone/bottom/camera_info", CameraInfo, camera_info_callback)
-    pub = rospy.Publisher('belief', OccupancyGrid, queue_size=10)
-    intrinsicMatrix = None
-    firstStep = True
+    rospy.Subscriber("/ardrone/bottom/image_raw", Image, img_callback, queue_size=5)
+    error_pub = rospy.Publisher("/error", PointStamped, queue_size=5)
+
+    frame = None
+    observation = None
 
     f = KalmanFilter(dim_x=2, dim_z=2)
     f.x = np.array([[0.], [0.]])       # initial state (location and velocity)
@@ -63,15 +44,54 @@ if __name__ == '__main__':
     f.F = np.array([[1.0002,0.],
                     [0.,1.0002]])    # state transition matrix
 
-    f.H = np.array([[1,0.], [0,1]])    # Measurement function
-    f.P *= 20.                   # covariance matrix
-    f.R = 5                      # state uncertainty
-    f.Q = Q_discrete_white_noise(dim=2, dt=0.1, var=0.03) # process uncertainty
+    f.P = np.array([[10.0,   0.0],
+                    [0.0, 10.0]])
 
-    # belief                    = OccupancyGrid()
-    # belief.info.map_load_time = rospy.get_rostime()  # Belief time
-    # belief.info.resolution    = 1				     # m/cell
-    # belief.info.width         = 100					 # cells
-    # belief.info.height        = 60					 # cells
-    # belief.data = None
-    rospy.spin()
+    f.R = np.array([[0.0001, 0.0],
+                    [0.0, 0.0001]])
+
+    f.H = np.array([[1.0, 0.0],
+                    [0.0, 1.0]])
+    f.Q = Q_discrete_white_noise(dim = 2, dt = 100.0, var = 5000.0)
+
+    rate = rospy.Rate(100) # 10hz
+    cv2.namedWindow("Kalman Filter Output",1)
+
+    while not rospy.is_shutdown():
+        print "Prior Belief :", f.x
+        f.predict()
+        x_bar, covar = f.get_prediction()
+        print "Prediction :", x_bar, covar
+
+        if observation != None:
+            z = np.array([[observation.point.x], [observation.point.y]])
+		    # print "Predicted State: "
+		    # print x_bar
+            print "Observation: ", z
+            f.update(z)
+            print "Updated State: ", f.x
+
+        if frame != None:
+            cv2.circle(frame, (int(f.x[0][0]), int(f.x[1][0])), int(20), (0, 255, 0), 3, 8, 0)
+            if observation != None:
+                cv2.circle(frame, (int(observation.point.x), int(observation.point.y)), int(observation.point.z), (0, 0, 255), 3, 8, 0)
+            cv2.imshow("Kalman Filter Output", frame)
+            cv2.waitKey(20)
+
+        frame_width = 640
+        frame_height = 360
+
+        error_x = f.x[0][0] - frame_width/2
+        error_y = f.x[1][0] - frame_height/2
+
+        Error = PointStamped()
+        Error.header.frame_id = 'error_frame'
+        Error.header.stamp = rospy.Time.now()
+        Error.point.x = error_x
+        Error.point.y = error_y
+        Error.point.z = 0.0
+        error_pub.publish(Error)
+        rate.sleep()
+
+
+    # rospy.spin()

@@ -39,7 +39,7 @@ class LandingZoneDetector(BaseDetector):
         # How big should the feature points be (in pixels)?
         self.feature_size = rospy.get_param("~feature_size", 3)
 
-	# Filter parameters
+	    # Filter parameters
         self.medianBlur_ksize = rospy.get_param("~medianBlur_ksize", 5)
         self.GaussianBlur_ksize_width = rospy.get_param("~GaussianBlur_ksize_width", 9)
         self.GaussianBlur_ksize_height = rospy.get_param("~GaussianBlur_ksize_height", 9)
@@ -52,6 +52,10 @@ class LandingZoneDetector(BaseDetector):
                                         sigmaX = self.GaussianBlur_sigmaX,
                                         sigmaY = self.GaussianBlur_sigmaY,
                                         borderType = BORDER_DEFAULT)
+
+        # Get kernel parameters
+        self.kernel_param_1 = rospy.get_param("~kernel_param_1", 20)
+        self.kernel_param_2 = rospy.get_param("~kernel_param_2", 20)
 
         # HoughCircles features parameters
         self.HoughCircles_dp = rospy.get_param("~HoughCircles_dp", 1)
@@ -81,18 +85,8 @@ class LandingZoneDetector(BaseDetector):
 
             # Mask image
             self.mask = np.zeros_like(cv_image)
-
-            # mask for perfect world(simulation)
-            #h = hsv[:,:,0] == 0
-            #s = hsv[:,:,1] == 0
-            #v = hsv[:,:,2] == 255
-            # mask for real, cruel, unforgiving, unfair, fucked-up world
-            #h = np.logical_and(hsv[:,:,0] >= 0, hsv[:,:,0] <= 100)
             s = np.logical_and(hsv[:,:,1] >= 0, hsv[:,:,1] <=50  )
             v = np.logical_and(hsv[:,:,2] >= 220, hsv[:,:,2] <= 255)
-
-
-            #self.mask[h & s & v] = 255
             self.mask[s & v] = 255
             self.mask = self.mask.astype(np.uint8)
 
@@ -113,12 +107,15 @@ class LandingZoneDetector(BaseDetector):
 
 		# Equalize the histogram to reduce lighting effects
             	grey = cv2.equalizeHist(grey)
-		
-		# Remove salt-and-pepper, and white noise by using a 
+
+		# Remove salt-and-pepper, and white noise by using a
 		#combination of a median and Gaussian filter
             	grey = cv2.medianBlur(grey, **self.medianBlur_params)
             	grey = cv2.GaussianBlur(grey, **self.GaussianBlur_params)
-		
+                kernel_1 = np.ones((self.kernel_param_1,self.kernel_param_2), np.uint8)
+		grey = cv2.erode(grey, kernel_1, iterations=1)
+                #grey = cv2.morphologyEx(grey, cv2.MORPH_CLOSE, kernel_1)
+
                 cv2.imshow('Imaged Searched',grey)
 
                 # Get the HoughCircles feature closest to the image's center
@@ -127,11 +124,19 @@ class LandingZoneDetector(BaseDetector):
                 if feature_point is not None and len(feature_point) > 0:
                     # Draw the center of the circle
                     cv2.circle(self.marker_image, (feature_point[0], feature_point[1]), self.feature_size, (0, 0, 255, 0), cv.CV_FILLED, 8, 0)
+                    
                     # Draw the outer circle
                     cv2.circle(self.marker_image, (feature_point[0], feature_point[1]), feature_point[2], (0, 255, 0, 0), self.feature_size, 8, 0)
-
+		    
+                    # Draw error line
+                    cv2.line(self.marker_image, (self.frame_width/2, self.frame_height/2), (feature_point[0], feature_point[1]), (0, 0, 255), 10, 8, 0)
+	            
+                    # Display error distance on screen
+                    strInfo =  str('Error: ' + str(self.frame_width/2-feature_point[0]) + " ," + str(self.frame_height/2-feature_point[1]))
+		    cv2.putText(self.marker_image, strInfo, (self.frame_width/2, self.frame_height/2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+	            
                     # Convert feature_point from image coordinates to world coordinates
-                    feature_point = np.array((feature_point[0], feature_point[1]))
+                    feature_point = np.array((feature_point[0], feature_point[1], feature_point[2]))
 
                     # Provide self.tracked_point to publish_poi to be published on the /poi topic
                     self.tracked_point = feature_point
@@ -144,7 +149,6 @@ class LandingZoneDetector(BaseDetector):
         # Initialize key variables
         feature_points = list()
         feature_point = list()
-        frame_height, frame_width = input_image.shape
 
         # Compute the x, y, and radius of viable circle features
         fp = cv2.HoughCircles(input_image, **self.HoughCircles_params)
